@@ -44,9 +44,17 @@ namespace pxsim.svg {
     }
 
     export function path(parent: Element, cls: string, data: string, title?: string): SVGElement {
+        let el = mkPath(cls, data, title);
+        parent.appendChild(el);
+        return el;
+    }
+
+    export function mkPath(cls: string, data: string, title?: string): SVGPathElement {
         let p: any = { class: cls, d: data };
         if (title) p["title"] = title;
-        return svg.child(parent, "path", p);
+        let el = <SVGPathElement>svg.elt("path");
+        svg.hydrate(el, p);
+        return el;
     }
 
     export function fill(el: SVGElement, c: string) {
