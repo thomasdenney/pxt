@@ -1,3 +1,7 @@
+/*
+ * Compiler backend for JavaScript, used by the simulator. The generated JavaScript is much closer to the Assembly output than the original TypeScript source; it generates code with jump statements and the like.
+ */
+
 namespace ts.pxt {
     const jsOpMap: U.Map<string> = {
         "thumb::adds": "+",
@@ -7,6 +11,7 @@ namespace ts.pxt {
         "thumb::muls": "*"
     }
 
+    //Generates the JS used by the simulator (verify) based on the IR
     export function jsEmit(bin: Binary) {
         let jssource = ""
         if (!bin.target.jsRefCounting)
@@ -22,6 +27,7 @@ namespace ts.pxt {
         bin.writeFile(BINARY_JS, jssource)
     }
 
+    //Generates the JS used by the simulator for an individual function (done for every top level function)
     export function irToJS(bin: Binary, proc: ir.Procedure) {
         let resText = ""
         let writeRaw = (s: string) => { resText += s + "\n"; }

@@ -1,6 +1,8 @@
 namespace ts.pxt {
+    //atob() is a standard JavaScript functon for decoding base 64
     export var decodeBase64 = function (s: string) { return atob(s); }
 
+    //Called for each top level function
     function irToAssembly(bin: Binary, proc: ir.Procedure) {
         let resText = ""
         let write = (s: string) => { resText += asmline(s); }
@@ -18,11 +20,13 @@ ${getFunctionLabel(proc.action)}:
     push {lr}
 `)
 
+        //Allocate stack space for all of the local variables and make sure that they are all initially set to 0
         let numlocals = proc.locals.length
         if (numlocals > 0) write("movs r0, #0")
         proc.locals.forEach(l => {
             write("push {r0} ; loc")
         })
+        //@stackmark is a custom function directive that will only work with the thumb assembler (thumb.ts). The idea is that it keeps track of the stack position when these directives are used, to ease the arithmetic required to access specific local variables
         write("@stackmark locals")
 
         //console.log(proc.toString())
@@ -520,6 +524,7 @@ ${getFunctionLabel(proc.action)}:
             oops();
         }
 
+        //TODO: Determine what this function does
         export function validateShim(funname: string, attrs: CommentAttrs, hasRet: boolean, numArgs: number) {
             if (attrs.shim == "TD_ID" || attrs.shim == "TD_NOOP")
                 return
@@ -665,8 +670,9 @@ ${lbl}: .string ${stringLiteral(s)}
         }
     }
 
-
+    //Generates the full ARM Assembly output for the program
     function serialize(bin: Binary) {
+        //The hex prelude contains the start address of the program, which has already been determined in the call to setupFor (done by emitter.compileBinary). The template hash is also determined at this stage
         let asmsource = `; start
 ${hex.hexPrelude()}        
     .hex 708E3B92C615A841C49866C975EE5197 ; magic number
@@ -674,6 +680,8 @@ ${hex.hexPrelude()}
     .hex 0000000000000000 ; @SRCHASH@
     .space 16 ; reserved
 `
+
+        //Append Assembly for every top-level function
         bin.procs.forEach(p => {
             asmsource += "\n" + irToAssembly(bin, p) + "\n"
         })
@@ -795,6 +803,7 @@ _stored_program: .string "`
         return str
     }
 
+    //Main driver for emitting ARM Thumb-16 output
     export function thumbEmit(bin: Binary, opts: CompileOptions) {
         let src = serialize(bin)
         src = patchSrcHash(src)

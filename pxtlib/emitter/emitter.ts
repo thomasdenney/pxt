@@ -331,10 +331,14 @@ namespace ts.pxt {
         thisParameter?: ParameterDeclaration; // a bit bogus
     }
 
+    /*
+     * Produces the actual hex file output
+     */
     export function compileBinary(program: Program, host: CompilerHost, opts: CompileOptions, res: CompileResult): EmitResult {
         const diagnostics = createDiagnosticCollection();
         checker = program.getTypeChecker();
         let classInfos: StringMap<ClassInfo> = {}
+        //Make sure that declarations (e.g. functions) are only compiled if they are actually used
         let usedDecls: StringMap<boolean> = {}
         let usedWorkList: Declaration[] = []
         let variableStatus: StringMap<VariableAddInfo> = {};
@@ -375,6 +379,7 @@ namespace ts.pxt {
         let bin: Binary;
         let proc: ir.Procedure;
 
+        //Separate function as two passes of rootFunction (declared below) are done if noe modifications are made
         function reset() {
             bin = new Binary();
             bin.res = res;
@@ -385,6 +390,7 @@ namespace ts.pxt {
         let allStmts = Util.concat(program.getSourceFiles().map(f => f.statements))
 
         let src = program.getSourceFiles()[0]
+        //Allow any top level statements to be treated as part of the main function
         let rootFunction = <any>{
             kind: SK.FunctionDeclaration,
             parameters: [],
@@ -403,12 +409,14 @@ namespace ts.pxt {
             isRootFunction: true
         }
 
+        //Ensure that the rootFunction is always 'used' so that it is always compiled
         markUsed(rootFunction);
         usedWorkList = [];
 
         reset();
         emit(rootFunction)
 
+        //diagnostics.getModificationCount() is part of TypeScript, not PXT
         if (diagnostics.getModificationCount() == 0) {
             reset();
             bin.finalPass = true
@@ -477,6 +485,7 @@ namespace ts.pxt {
             }
         }
 
+        //Maintains proc as whatever procedure was previously being passed before executing the lambda f
         function scope(f: () => void) {
             let prevProc = proc;
             try {
@@ -486,6 +495,7 @@ namespace ts.pxt {
             }
         }
 
+        //Produces JavaScript, hex, or Assembly
         function finalEmit() {
             if (diagnostics.getModificationCount() || opts.noEmit)
                 return;
@@ -1060,12 +1070,15 @@ ${lbl}: .short 0xffff
             return r
         }
 
+        //Produces the IR for a function
         function emitFunctionDeclaration(node: FunctionLikeDeclaration) {
             if (!isUsed(node))
                 return;
 
+            //Gets the comments associated with the function and formats them appropriately
             let attrs = parseComments(node)
             if (attrs.shim != null) {
+                //Not sure what this is for
                 if (opts.target.isNative) {
                     hex.validateShim(getDeclName(node),
                         attrs,
@@ -1075,6 +1088,7 @@ ${lbl}: .short 0xffff
                 return
             }
 
+            //Apparently 'ambient' is now called 'global' in TypeScript, and indicates that a variable is being introduced in some scope that TypeScript can't see, e.g. in some external JavaScript file, but this isn't relevant to PXT's purposes.
             if (node.flags & NodeFlags.Ambient)
                 return;
 
@@ -1083,6 +1097,7 @@ ${lbl}: .short 0xffff
 
             let info = getFunctionInfo(node)
 
+            //Function expression is when you have an expression as an r-value and don't give it a name (i.e. not a function declaration)
             let isExpression = node.kind == SK.ArrowFunction || node.kind == SK.FunctionExpression
 
             let isRef = (d: Declaration) => {
@@ -1128,10 +1143,10 @@ ${lbl}: .short 0xffff
 
             assert(!!lit == isExpression)
 
+            //Scope calls this lambda and - regardless of whether an exception is thrown - then maintains the value of proc
             scope(() => {
-                let isRoot = proc == null
                 proc = new ir.Procedure();
-                proc.isRoot = isRoot
+                proc.isRoot = proc == null;
                 proc.action = node;
                 proc.info = info;
                 proc.captured = locals;
@@ -1751,6 +1766,7 @@ ${lbl}: .short 0xffff
             }
         }
 
+        //Produces the IR for a given Node and additionally handles errors
         function emit(node: Node): void {
             try {
                 emitNodeCore(node);
@@ -1760,6 +1776,7 @@ ${lbl}: .short 0xffff
             }
         }
 
+        //Produces the IR for a given Node
         function emitNodeCore(node: Node): void {
             switch (node.kind) {
                 case SK.SourceFile:
@@ -1776,6 +1793,7 @@ ${lbl}: .short 0xffff
                 case SK.FunctionDeclaration:
                 case SK.Constructor:
                 case SK.MethodDeclaration:
+                    //This is what the rootFunction will go through initially
                     emitFunctionDeclaration(<FunctionLikeDeclaration>node);
                     return
                 case SK.ExpressionStatement:

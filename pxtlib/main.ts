@@ -545,6 +545,7 @@ namespace pxt {
                 })
         }
 
+        //The only other place to reference the compile function, but this function is unused
         buildAsync(target: ts.pxt.CompileTarget) {
             return this.getCompileOptionsAsync(target)
                 .then(opts => ts.pxt.compile(opts))

@@ -21,6 +21,7 @@ namespace ts.pxt.Util {
         return r;
     }
 
+    //Very simple expression thrower, used everywhere. I would argue for its removal
     export function oops(msg = "OOPS"): Error {
         debugger
         throw new Error(msg)

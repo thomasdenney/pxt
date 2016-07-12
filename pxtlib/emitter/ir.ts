@@ -2,6 +2,7 @@ namespace ts.pxt.ir {
     let U = ts.pxt.Util;
     let assert = U.assert;
 
+    //Expression Kind
     export enum EK {
         None,
         NumberLiteral,
@@ -151,7 +152,7 @@ namespace ts.pxt.ir {
         }
     }
 
-
+    //Statement kind
     export enum SK {
         None,
         Expr,
@@ -216,6 +217,9 @@ namespace ts.pxt.ir {
         }
     }
 
+    /*
+     * Represents something that can be stored in memory
+     */
     export class Cell {
         isarg = false;
         iscap = false;

@@ -135,6 +135,9 @@ namespace ts.pxt {
         })
     }
 
+    /*
+     * Main driving function for the compiler
+    */
     export function compile(opts: CompileOptions) {
         let startTime = Date.now()
         let res: CompileResult = {
@@ -175,6 +178,7 @@ namespace ts.pxt {
             opts.sourceFiles = Object.keys(opts.fileSystem)
 
         let tsFiles = opts.sourceFiles.filter(f => U.endsWith(f, ".ts"))
+        //createProgram is part of the TypeScript compiler; it parses the TypeScript source to an AST
         let program = createProgram(tsFiles, options, host);
 
         // First get and report any syntactic errors.
@@ -197,6 +201,7 @@ namespace ts.pxt {
         }
 
         if (opts.ast || res.diagnostics.length == 0) {
+            //Call that produces hex file
             const binOutput = compileBinary(program, host, opts, res);
             res.times["compilebinary"] = Date.now() - emitStart
             res.diagnostics = patchUpDiagnostics(binOutput.diagnostics)
